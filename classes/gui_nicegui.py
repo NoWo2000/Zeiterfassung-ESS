@@ -117,39 +117,64 @@ class GuiNice:
         try:
             df = pd.read_csv(self.log_file, sep=";", decimal=",", encoding="utf-8")
             
-            # Ensure Date is datetime for sorting
+            # Ensure Date is datetime
             df['DateObj'] = pd.to_datetime(df['Datum'], dayfirst=True)
-            df = df.sort_values(by=['DateObj', 'PSP'], ascending=[False, True])
+            df['Week'] = df['DateObj'].dt.isocalendar().week
+            df['Year'] = df['DateObj'].dt.isocalendar().year
             
-            # Calculate total hours
-            total_hours_all = df['Zeit'].sum()
+            # Sort by Year desc, Week desc, Date desc, PSP asc (Newest first)
+            df = df.sort_values(by=['Year', 'Week', 'DateObj', 'PSP'], ascending=[False, False, False, True])
+            
+            # Helper for German Weekdays
+            german_weekdays = {
+                'Monday': 'Montag', 'Tuesday': 'Dienstag', 'Wednesday': 'Mittwoch',
+                'Thursday': 'Donnerstag', 'Friday': 'Freitag', 'Saturday': 'Samstag', 'Sunday': 'Sonntag'
+            }
 
             with self.analysis_container:
-                # ui.label(f'Gesamtstunden: {total_hours_all:.2f} h').classes('text-xl font-bold mb-4 w-full text-center') # Removed as per user request
-                
-                # Group by Date
-                for date_val, date_group in df.groupby('Datum', sort=False):
-                    date_hours = date_group['Zeit'].sum()
+                # Group by Year+Week
+                for (year_val, week_val), week_group in df.groupby(['Year', 'Week'], sort=False):
+                    week_hours = week_group['Zeit'].sum()
                     
-                    with ui.expansion(f'{date_val} ({date_hours:.2f} h)').classes('w-full bg-gray-100 dark:bg-gray-800 mb-1 rounded'):
-                        # Group by PSP within Date
-                        for psp_val, psp_group in date_group.groupby('PSP'):
-                            psp_hours = psp_group['Zeit'].sum()
+                    # Calculate Start (Monday) and End (Sunday) of the week from any date in that week
+                    any_date = week_group['DateObj'].iloc[0]
+                    start_of_week = any_date - pd.Timedelta(days=any_date.weekday())
+                    end_of_week = start_of_week + pd.Timedelta(days=6)
+                    
+                    kw_label = f"KW {week_val:02d} ({start_of_week.strftime('%d.%m.%Y')} - {end_of_week.strftime('%d.%m.%Y')}) | {week_hours:.2f} h"
+                    
+                    with ui.expansion(kw_label).classes('w-full bg-blue-100 dark:bg-blue-900 mb-2 rounded font-bold'):
+                        
+                        # Group by Date within Week
+                        for date_val, date_group in week_group.groupby('Datum', sort=False):
+                            date_hours = date_group['Zeit'].sum()
                             
-                            with ui.expansion(f'{psp_val} ({psp_hours:.2f} h)').classes('w-full ml-4 border-l-2 border-primary pl-2'):
-                                # Detailed Table for this PSP on this Date
-                                cols = [
-                                    {'name': 'Kunde', 'label': 'Kunde', 'field': 'Kunde', 'align': 'left'},
-                                    {'name': 'Zeit', 'label': 'Zeit (h)', 'field': 'Zeit', 'align': 'right'},
-                                    {'name': 'Kommentar', 'label': 'Kommentar', 'field': 'Kommentar', 'align': 'left'},
-                                ]
-                                # Convert Timestamp to string in records to avoid JSON serialization error
-                                records = psp_group.to_dict('records')
-                                for record in records:
-                                    if 'DateObj' in record:
-                                        del record['DateObj'] # Remove the helper column
-                                
-                                ui.table(columns=cols, rows=records).props('dense flat hide-bottom').classes('w-full')
+                            # Determine weekday name
+                            en_name = date_group['DateObj'].iloc[0].strftime("%A")
+                            de_name = german_weekdays.get(en_name, en_name)
+                            
+                            day_label = f"{de_name}, {date_val} ({date_hours:.2f} h)"
+                            
+                            with ui.expansion(day_label).classes('w-full ml-2 bg-gray-50 dark:bg-gray-800 mb-1 rounded'):
+                                # Group by PSP within Date
+                                for psp_val, psp_group in date_group.groupby('PSP'):
+                                    psp_hours = psp_group['Zeit'].sum()
+                                    
+                                    with ui.expansion(f'{psp_val} ({psp_hours:.2f} h)').classes('w-full ml-4 border-l-2 border-primary pl-2'):
+                                        # Detailed Table for this PSP
+                                        cols = [
+                                            {'name': 'Kunde', 'label': 'Kunde', 'field': 'Kunde', 'align': 'left'},
+                                            {'name': 'Zeit', 'label': 'Zeit (h)', 'field': 'Zeit', 'align': 'right'},
+                                            {'name': 'Kommentar', 'label': 'Kommentar', 'field': 'Kommentar', 'align': 'left'},
+                                        ]
+                                        # Clean up records for JSON
+                                        records = psp_group.to_dict('records')
+                                        for record in records:
+                                            # Remove temporary columns if they exist in the record dict
+                                            for key in ['DateObj', 'Week', 'Year']:
+                                                if key in record: del record[key]
+                                        
+                                        ui.table(columns=cols, rows=records).props('dense flat hide-bottom').classes('w-full')
         except Exception as e:
             with self.analysis_container:
                 ui.label(f'Fehler bei der Auswertung: {e}').classes('text-red-500')
