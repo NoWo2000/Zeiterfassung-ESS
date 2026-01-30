@@ -33,9 +33,40 @@ class Configuration:
         self.delete_all()
         self.config.read("config.ini", encoding="utf-8")
 
+    def add_item(self, section: str, item: str):
+        """
+        Fügt ein Item zu einer Sektion hinzu und speichert die Konfiguration.
+        """
+        if not self.config.has_section(section):
+            self.config.add_section(section)
+        
+        # In ConfigParser with allow_no_value=True, keys are added with None value
+        if item not in self.config.options(section):
+            self.config.set(section, item, None)
+            self.save()
+
+    def remove_item(self, section: str, item: str):
+        """
+        Entfernt ein Item aus einer Sektion und speichert die Konfiguration.
+        """
+        if self.config.has_section(section):
+            self.config.remove_option(section, item)
+            self.save()
+
+    def save(self):
+        """
+        Speichert die aktuelle Konfiguration in die config.ini Datei.
+        """
+        with open("config.ini", "w", encoding="utf-8") as configfile:
+            self.config.write(configfile)
+
     def delete_all(self):
         """
-        Löscht alle aktuell geladenen Sektionen aus dem ConfigParser-Objekt.
+        Löscht alle aktuell geladenen Sektionen aus dem ConfigParser-Objekt (intern).
         """
+        self.config.clear()
+        # Re-apply defaults if any were needed, but ConfigParser() init handled that. 
+        # Actually clear() might wipe optionxform too on some versions? 
+        # Safer to just remove sections.
         for section in self.config.sections():
             self.config.remove_section(section)

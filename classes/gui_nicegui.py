@@ -37,6 +37,7 @@ class GuiNice:
         with ui.tabs().classes('w-full') as tabs:
             self.tab_booking = ui.tab('Buchung')
             self.tab_analysis = ui.tab('Auswertung')
+            self.tab_settings = ui.tab('Einstellungen')
 
         with ui.tab_panels(tabs, value=self.tab_booking).classes('w-full h-full p-0'):
             
@@ -106,6 +107,14 @@ class GuiNice:
                 self.analysis_container = ui.column().classes('w-full')
                 ui.button('Aktualisieren', on_click=self.show_analysis_table).props('dense outline').classes('w-full mb-2')
                 self.show_analysis_table() # Initial load
+
+            # --- SETTINGS TAB ---
+            with ui.tab_panel(self.tab_settings).classes('w-full p-2 gap-2'):
+                ui.label('Konfiguration verwalten').classes('text-lg font-bold mb-2')
+                
+                self.render_settings_list("PSP-Elemente", "psp", "Neues PSP-Element")
+                self.render_settings_list("Kunden", "customer", "Neuer Kunde")
+                self.render_settings_list("Kommentare (Vorlagen)", "comments", "Neuer Kommentar")
 
     def show_analysis_table(self):
         self.analysis_container.clear()
@@ -187,6 +196,63 @@ class GuiNice:
         except Exception as e:
             with self.analysis_container:
                 ui.label(f'Fehler bei der Auswertung: {e}').classes('text-red-500')
+
+    def render_settings_list(self, title, section, placeholder):
+        with ui.card().classes('w-full p-3 mb-2 border-[1px] no-shadow'):
+            ui.label(title).classes('font-bold text-primary')
+            
+            # Container for list items
+            item_container = ui.row().classes('w-full flex-wrap gap-2')
+            
+            def refresh_items():
+                item_container.clear()
+                items = self.config.get_combobox_value(section)
+                if not items:
+                    with item_container:
+                        ui.label('Keine Einträge').classes('text-gray-400 italic text-sm')
+                for item in items:
+                    with item_container:
+                        # Chip with delete functionality
+                        with ui.element('div').classes('bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1 text-sm flex items-center gap-2 border border-gray-300 dark:border-gray-600'):
+                            ui.label(item)
+                            ui.icon('close').classes('cursor-pointer text-gray-500 hover:text-red-500 text-xs').on('click', lambda _, i=item: remove_item(i))
+
+            def remove_item(item):
+                self.config.remove_item(section, item)
+                refresh_items()
+                self.update_booking_options()
+                ui.notify(f'"{item}" entfernt.', type='info')
+
+            def add_item():
+                val = input_field.value.strip()
+                if val:
+                    self.config.add_item(section, val)
+                    input_field.value = ""
+                    refresh_items()
+                    self.update_booking_options()
+                    ui.notify(f'"{val}" hinzugefügt.', type='positive')
+
+            # Input row
+            with ui.row().classes('w-full items-center gap-2 mt-2'):
+                input_field = ui.input(placeholder=placeholder).props('dense').classes('flex-grow')
+                ui.button(icon='add', on_click=add_item).props('dense flat round color=primary')
+
+            # Initial population
+            refresh_items()
+
+    def update_booking_options(self):
+        """Refreshes the dropdown options in the booking tab."""
+        if self.psp_input:
+            self.psp_input.options = self.config.get_combobox_value("psp")
+            self.psp_input.update()
+        
+        if self.customer_input:
+            self.customer_input.options = self.config.get_combobox_value("customer")
+            self.customer_input.update()
+            
+        if self.comment_input:
+            self.comment_input.options = self.config.get_combobox_value("comments")
+            self.comment_input.update()
 
     def save_entry(self):
         # Validation
