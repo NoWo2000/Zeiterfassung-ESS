@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-class Configuration:
+class Configuration: 
     def __init__(self):
         self.config = ConfigParser(allow_no_value=True)
         self.config.optionxform = str

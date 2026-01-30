@@ -1,6 +1,6 @@
 from tkinter import Tk, Label, Button, Menu
 from tkinter import messagebox, ttk
-import time
+import time 
 from os import path as os_path, system as os_system
 from webbrowser import open as webbrowser_open
 from tkcalendar import DateEntry
