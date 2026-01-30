@@ -1,22 +1,4 @@
 Datum;Kalenderwoche;PSP;Kunde;Zeit;Kommentar
 
-01.12.2025;49;PSP-1;Cust-A;4,0;Feature implementation
-01.12.2025;49;PSP-2;Cust-B;2,0;Code review
-02.12.2025;49;PSP-1;Cust-A;3,5;Debugging
-02.12.2025;49;PSP-3;Cust-C;1,0;Status sync
-03.12.2025;49;PSP-2;Cust-B;5,0;UI design
-03.12.2025;49;PSP-1;Cust-A;2,5;Documentation
-04.12.2025;49;PSP-4;Cust-D;6,0;Backend setup
-04.12.2025;49;PSP-2;Cust-B;1,5;Refactoring
-05.12.2025;49;PSP-3;Cust-C;4,0;Workshop
-05.12.2025;49;PSP-1;Cust-A;2,0;Deployment
-08.12.2025;50;PSP-1;Cust-A;3,0;Research
-08.12.2025;50;PSP-2;Cust-B;4,0;Integration tests
-09.12.2025;50;PSP-3;Cust-C;2,5;Client call
-09.12.2025;50;PSP-1;Cust-A;5,0;Hotfix
-10.12.2025;50;PSP-4;Cust-D;3,5;Database migration
-10.12.2025;50;PSP-2;Cust-B;2,0;Mentoring
-11.12.2025;50;PSP-1;Cust-A;4,5;Performance tuning
-11.12.2025;50;PSP-3;Cust-C;1,5;Planning
-12.12.2025;50;PSP-2;Cust-B;6,0;Security audit
+
 
