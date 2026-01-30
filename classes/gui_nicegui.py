@@ -143,7 +143,7 @@ class GuiNice:
                     
                     kw_label = f"KW {week_val:02d} ({start_of_week.strftime('%d.%m.%Y')} - {end_of_week.strftime('%d.%m.%Y')}) | {week_hours:.2f} h"
                     
-                    with ui.expansion(kw_label).classes('w-full bg-blue-100 dark:bg-blue-900 mb-2 rounded font-bold'):
+                    with ui.expansion(kw_label).props('dense header-class="bg-blue-100 dark:bg-blue-900 rounded-t"').classes('w-full mb-1 border border-blue-200 dark:border-blue-800 rounded shadow-sm text-sm'):
                         
                         # Group by Date within Week
                         for date_val, date_group in week_group.groupby('Datum', sort=False):
@@ -155,17 +155,25 @@ class GuiNice:
                             
                             day_label = f"{de_name}, {date_val} ({date_hours:.2f} h)"
                             
-                            with ui.expansion(day_label).classes('w-full ml-2 bg-gray-50 dark:bg-gray-800 mb-1 rounded'):
+                            with ui.expansion(day_label).props('dense header-class="bg-gray-50 dark:bg-gray-800"').classes('w-full border-t border-gray-200 dark:border-gray-700 p-0'):
+                                
+                                
+                                
+                                # Global Header Removed as per user request (data is self-explanatory)
+
                                 # Group by PSP within Date
                                 for psp_val, psp_group in date_group.groupby('PSP'):
                                     psp_hours = psp_group['Zeit'].sum()
                                     
-                                    with ui.expansion(f'{psp_val} ({psp_hours:.2f} h)').classes('w-full ml-4 border-l-2 border-primary pl-2'):
+                                    # Static Header for PSP (No Expansion)
+                                    with ui.column().classes('w-full ml-4 border-l-2 border-primary pl-2 mt-2 mb-1'):
+                                        ui.label(f'{psp_val} ({psp_hours:.2f} h)').classes('font-bold text-sm')
+                                        
                                         # Detailed Table for this PSP
                                         cols = [
-                                            {'name': 'Kunde', 'label': 'Kunde', 'field': 'Kunde', 'align': 'left'},
-                                            {'name': 'Zeit', 'label': 'Zeit (h)', 'field': 'Zeit', 'align': 'right'},
-                                            {'name': 'Kommentar', 'label': 'Kommentar', 'field': 'Kommentar', 'align': 'left'},
+                                            {'name': 'Kunde', 'label': 'Kunde', 'field': 'Kunde', 'align': 'left', 'classes': 'w-1/3', 'headerClasses': 'hidden'},
+                                            {'name': 'Zeit', 'label': 'Zeit (h)', 'field': 'Zeit', 'align': 'right', 'classes': 'w-1/3', 'headerClasses': 'hidden'},
+                                            {'name': 'Kommentar', 'label': 'Kommentar', 'field': 'Kommentar', 'align': 'left', 'classes': 'w-1/3', 'headerClasses': 'hidden'},
                                         ]
                                         # Clean up records for JSON
                                         records = psp_group.to_dict('records')
@@ -174,7 +182,8 @@ class GuiNice:
                                             for key in ['DateObj', 'Week', 'Year']:
                                                 if key in record: del record[key]
                                         
-                                        ui.table(columns=cols, rows=records).props('dense flat hide-bottom').classes('w-full')
+                                        # hide-header is key here
+                                        ui.table(columns=cols, rows=records).props('dense flat hide-bottom hide-header wrap-cells').classes('w-full')
         except Exception as e:
             with self.analysis_container:
                 ui.label(f'Fehler bei der Auswertung: {e}').classes('text-red-500')
