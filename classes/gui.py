@@ -1,13 +1,23 @@
 from tkinter import Tk, Label, Button, Menu
 from tkinter import messagebox, ttk
+import sv_ttk
 import time 
-from os import path as os_path, system as os_system
+import time
+from os import path as os_path
 from webbrowser import open as webbrowser_open
 from tkcalendar import DateEntry
 from datetime import date
 from pandas import read_csv as pd_read_csv, isnull as pb_isnull
 
+import platform
+import subprocess
+import sys
 from classes.auswertung import Auswertung
+
+# Konstanten für Dateinamen
+LOG_FILE = "log.csv"
+CONFIG_FILE = "config.ini"
+
 
 class Gui:
     def __init__(self, config) -> None:
@@ -73,7 +83,14 @@ class Gui:
                         message="Bitte gib eine Bearbeitungszeit an!", title="Error #2"
                     )
                 else:
-                    self.time_in_h = str(round(float(self.entrybox_duration.get()) / 60, 4))
+                    try:
+                        duration_min = float(self.entrybox_duration.get())
+                        self.time_in_h = str(round(duration_min / 60, 4))
+                    except ValueError:
+                        messagebox.showerror(
+                            message="Bitte gib eine gültige Zahl für die Dauer an!", title="Error #2"
+                        )
+                        return
                 self.time_in_h = self.time_in_h.replace(".", ",")
                 self.entry_text = ";".join(
                     [
@@ -108,14 +125,35 @@ class Gui:
                 self.entrybox_sleeptimer.set("")
 
     def sleeptimer_button_action(self):
-        if str(self.entrybox_sleeptimer.get()) == "":
+        """
+        Aktiviert den Sleeptimer. Das Fenster wird ausgeblendet und nach der
+        angegebenen Zeit wieder eingeblendet.
+        """
+        timer_value = self.entrybox_sleeptimer.get()
+        if not timer_value:
             messagebox.showerror("Fehler", "Bitte geben Sie einen Wert für den Sleep-Timer ein.")
             return
-        sleepsec = int(self.entrybox_sleeptimer.get())
+
+        try:
+            sleep_min = int(timer_value)
+        except ValueError:
+             messagebox.showerror("Fehler", "Bitte geben Sie eine gültige Zahl ein.")
+             return
+        
+        # Datensatz speichern
         self.save_button_action()
 
+        # Fenster ausblenden
         self.window.withdraw()
-        time.sleep(sleepsec * 60)
+        
+        # Timer starten (in Millisekunden umrechnen)
+        self.window.after(sleep_min * 60 * 1000, self.wake_up)
+
+    def wake_up(self):
+        """
+        Callback-Funktion für den Sleeptimer.
+        Bringt das Fenster zurück und zeigt eine Erinnerung.
+        """
         messagebox.showinfo(message="Arbeitszeiten Eintragen", title="Erinnerung")
         self.window.deiconify()
 
@@ -129,7 +167,22 @@ class Gui:
         messagebox.showinfo(message=m_text, title="Infos")
 
     def open_excel(self):
-        os_system("start EXCEL.EXE Auswertung.xlsx")
+        """Öffnet die Auswertungs-Exceldatei abhängig vom Betriebssystem."""
+        file_path = "Auswertung.xlsx"
+        if not os_path.exists(file_path):
+             messagebox.showwarning("Datei nicht gefunden", f"Die Datei {file_path} wurde nicht gefunden.")
+             return
+
+        system_platform = platform.system()
+        try:
+            if system_platform == "Windows":
+                os.startfile(file_path)
+            elif system_platform == "Darwin":  # macOS
+                subprocess.call(["open", file_path])
+            else:  # Linux
+                subprocess.call(["xdg-open", file_path])
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Fehler beim Öffnen der Datei: {e}")
 
     def show_table(self): 
         self.auswertung.run_analysis()
@@ -150,7 +203,21 @@ class Gui:
  
 
     def open_configuration(self):
-        os_system("start NOTEPAD.EXE config.ini")
+        """Öffnet die Konfigurationsdatei abhängig vom Betriebssystem."""
+        if not os_path.exists(CONFIG_FILE):
+             messagebox.showwarning("Datei nicht gefunden", f"Die Datei {CONFIG_FILE} wurde nicht gefunden.")
+             return
+
+        system_platform = platform.system()
+        try:
+            if system_platform == "Windows":
+                 subprocess.run(["notepad.exe", CONFIG_FILE])
+            elif system_platform == "Darwin":  # macOS
+                subprocess.call(["open", "-t", CONFIG_FILE]) # -t opens with default text editor
+            else:  # Linux
+                subprocess.call(["xdg-open", CONFIG_FILE])
+        except Exception as e:
+             messagebox.showerror("Fehler", f"Fehler beim Öffnen der Datei: {e}")
 
     def reload_configuration(self, config):
         config.update()
@@ -182,50 +249,60 @@ class Gui:
         self.window = Tk()
         # window configurations
         self.window.title("Smart ESS")
+        # self.window.geometry("520x450") # Let auto-size handle it or keep it if preferred
         self.window.resizable(False, False)
-        self.window.attributes("-alpha", 0.975)
+        # self.window.attributes("-alpha", 0.975)
+        
+        # Apply Sun Valley Theme
+        # Standard Modern: Light Theme by default
+        sv_ttk.set_theme("light")
+
+        # Create a main frame to hold content (important for background color in sv-ttk)
+        self.main_frame = ttk.Frame(self.window, padding=20)
+        self.main_frame.pack(fill="both", expand=True)
 
     def configure_labels(self):
-        self.my_label_option_date = Label(self.window, text="Datum (Optional): ")
-        self.my_label_psp = Label(self.window, text="PSP: ")
-        self.my_label_customer = Label(self.window, text="Kunde: ")
-        self.my_label_duration = Label(self.window, text="Dauer (min): ")
-        self.my_label_sleeptimer = Label(self.window, text="Sleeptimer (min): ")
-        self.my_label_last_timestamp = Label(self.window)
-        self.my_label_last_entry_information = Label(self.window)
-        self.my_label_comment = Label(self.window, text="Kommentar: ")
+        self.my_label_option_date = ttk.Label(self.main_frame, text="Datum (Optional): ")
+        self.my_label_psp = ttk.Label(self.main_frame, text="PSP: ")
+        self.my_label_customer = ttk.Label(self.main_frame, text="Kunde: ")
+        self.my_label_duration = ttk.Label(self.main_frame, text="Dauer (min): ")
+        self.my_label_sleeptimer = ttk.Label(self.main_frame, text="Sleeptimer (min): ")
+        self.my_label_last_timestamp = ttk.Label(self.main_frame, text="")
+        self.my_label_last_entry_information = ttk.Label(self.main_frame, text="")
+        self.my_label_comment = ttk.Label(self.main_frame, text="Kommentar: ")
 
     def configure_entryfields(self, config):
+        width_val = 25
         self.entrybox_option_date = DateEntry(
-            self.window, width=47, selectmode='day', date_pattern='dd.mm.yyyy'
+            self.main_frame, width=width_val, selectmode='day', date_pattern='dd.mm.yyyy'
         )
 
         self.entrybox_psp = ttk.Combobox(
-            self.window, width=47, values=config.get_combobox_value("psp")
+            self.main_frame, width=width_val, values=config.get_combobox_value("psp")
         )
 
         self.entrybox_customer = ttk.Combobox(
-            self.window, width=47, values=config.get_combobox_value("customer")
+            self.main_frame, width=width_val, values=config.get_combobox_value("customer")
         )
 
         self.entrybox_duration = ttk.Combobox(
-            self.window, width=47, values=config.get_combobox_value("times")
+            self.main_frame, width=width_val, values=config.get_combobox_value("times")
         )
 
         self.entrybox_comment = ttk.Combobox(
-            self.window, width=47, values=config.get_combobox_value("comments")
+            self.main_frame, width=width_val, values=config.get_combobox_value("comments")
         )
 
         self.entrybox_sleeptimer = ttk.Combobox(
-            self.window, width=47, values=config.get_combobox_value("times")
+            self.main_frame, width=width_val, values=config.get_combobox_value("times")
         )
 
     def configure_buttons(self):
-        self.button_save = Button(
-            self.window, text="Speichern", command=self.save_button_action
+        self.button_save = ttk.Button(
+            self.main_frame, text="Speichern", command=self.save_button_action
         )
-        self.button_sleeptimer = Button(
-            self.window, text="Sleeptimer", command=self.sleeptimer_button_action
+        self.button_sleeptimer = ttk.Button(
+            self.main_frame, text="Sleeptimer", command=self.sleeptimer_button_action
         )
 
     def configure_menu(self, config):
@@ -251,26 +328,42 @@ class Gui:
         self.window.config(menu=self.menulist)
 
     def configure_gui_order(self):
-        self.my_label_option_date.grid(row=0, column=0)
-        self.my_label_psp.grid(row=1, column=0)
-        self.my_label_customer.grid(row=2, column=0)
-        self.my_label_duration.grid(row=3, column=0)
-        self.button_save.grid(row=5, column=0)
-        self.my_label_comment.grid(row=6, column=0)
-        self.my_label_sleeptimer.grid(row=7, column=0)
-        self.button_sleeptimer.grid(row=8, column=0)
-        self.my_label_last_timestamp.grid(row=9, column=0)
-        self.my_label_last_entry_information.grid(row=10, column=0)
-
-        self.entrybox_option_date.grid(row=0, column=1)
-        self.entrybox_psp.grid(row=1, column=1)
-        self.entrybox_customer.grid(row=2, column=1)
-        self.entrybox_duration.grid(row=3, column=1)
-        # button_save
-        self.entrybox_comment.grid(row=6, column=1)
-        self.entrybox_sleeptimer.grid(row=7, column=1)
-        # button_sleeptimer
-        self.my_label_last_timestamp.grid(row=10, column=0, columnspan=2)
-        self.my_label_last_entry_information.grid(row=11, column=0, columnspan=2)
+        # Compact layout
+        pad_x = 5
+        pad_y = 5
+        
+        # Row 0: Date
+        self.my_label_option_date.grid(row=0, column=0, padx=pad_x, pady=pad_y, sticky="w")
+        self.entrybox_option_date.grid(row=0, column=1, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 1: PSP
+        self.my_label_psp.grid(row=1, column=0, padx=pad_x, pady=pad_y, sticky="w")
+        self.entrybox_psp.grid(row=1, column=1, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 2: Customer
+        self.my_label_customer.grid(row=2, column=0, padx=pad_x, pady=pad_y, sticky="w")
+        self.entrybox_customer.grid(row=2, column=1, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 3: Duration
+        self.my_label_duration.grid(row=3, column=0, padx=pad_x, pady=pad_y, sticky="w")
+        self.entrybox_duration.grid(row=3, column=1, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 4: Comment
+        self.my_label_comment.grid(row=4, column=0, padx=pad_x, pady=pad_y, sticky="w")
+        self.entrybox_comment.grid(row=4, column=1, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 5: Save Button (Full width)
+        self.button_save.grid(row=5, column=0, columnspan=2, padx=pad_x, pady=(10, 5), sticky="ew")
+        
+        # Row 6: Sleeptimer (Input + Button in same row if possible, or stacked compactly)
+        # Let's put Label and Input on one row, Button on next, but tight.
+        self.my_label_sleeptimer.grid(row=6, column=0, padx=pad_x, pady=(15, pad_y), sticky="w")
+        self.entrybox_sleeptimer.grid(row=6, column=1, padx=pad_x, pady=(15, pad_y), sticky="ew")
+        
+        self.button_sleeptimer.grid(row=7, column=0, columnspan=2, padx=pad_x, pady=pad_y, sticky="ew")
+        
+        # Row 8+: Info
+        self.my_label_last_timestamp.grid(row=8, column=0, columnspan=2, padx=pad_x, pady=(15, 2))
+        self.my_label_last_entry_information.grid(row=9, column=0, columnspan=2, padx=pad_x, pady=2)
 
     # Configuration section end

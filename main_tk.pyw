@@ -2,9 +2,13 @@
 Haupteinstiegspunkt für die Zeiterfassungs-Anwendung.
 Initialisiert die Konfiguration und startet die GUI.
 """
+from classes.gui import Gui
 from classes.configuration import Configuration
-from classes.gui_nicegui import run_app
+
+
 
 if __name__ == "__main__":
-    run_app()
+    config = Configuration()
+    gui = Gui(config)
+    gui.window.mainloop()
 

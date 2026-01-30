@@ -1,74 +1,84 @@
-import csv 
 import tkinter as tk
 from tkinter import ttk
 from datetime import date as dt_date
+import pandas as pd
 
 class Auswertung:
     def __init__(self, log_file):
         self.log_file = log_file
 
-    def analyze_log_file(self):
-        result = {}
-        
-        # Mögliche Trennzeichen, die ausprobiert werden können
-        delimiters = [';', ',', '\t']
-        
-        for delimiter in delimiters:
-            try:
-                with open(self.log_file, 'r') as file:
-                    reader = csv.reader(file, delimiter=delimiter)
-                    next(reader)  # Überspringe die Header-Zeile
-                    for row in reader:
-                        if len(row) >= 6:  # Überprüfe, ob genügend Spalten vorhanden sind
-                            date = row[0]
-                            psp_element = row[2]
-                            customer = row[3]
-                            time = float(row[4].replace(',', '.'))  # Konvertiere das Zeitformat in einen Float-Wert
-                            comment = row[5]  # Kommentar aus der CSV-Datei
+    def analyze_log_file(self) -> dict | None:
+        """
+        Liest die Log-Datei ein und aggregiert die Arbeitszeiten nach Datum, PSP-Element und Kunde.
+        Verwendet Pandas für das Einlesen, analog zur Hauptanwendung.
+        """
+        try:
+            # Pandas zum Einlesen verwenden, analog zu sum_time_for_day in gui.py
+            # Wir gehen davon aus, dass das Trennzeichen ';' ist (wie beim Schreiben).
+            df = pd.read_csv(self.log_file, sep=";", decimal=",", encoding="utf-8")
+            
+            # Spaltennamen normalisieren (strip whitespace)
+            df.columns = df.columns.str.strip()
+            
+            # Sicherstellen, dass notwendige Spalten existieren
+            required_columns = ["Datum", "PSP", "Kunde", "Zeit", "Kommentar"]
+            if not all(col in df.columns for col in required_columns):
+                print(f"Fehler: Fehlende Spalten in {self.log_file}")
+                return None
 
-                            # Überprüfe, ob das Datum bereits im Ergebnis enthalten ist, andernfalls füge es hinzu
-                            if date not in result:
-                                result[date] = {}
+            result = {}
+            
+            for index, row in df.iterrows():
+                date_val = str(row["Datum"])
+                psp_element = str(row["PSP"])
+                customer = str(row["Kunde"])
+                
+                # Zeit ist bereits float dank decimal="," im read_csv
+                time_val = row["Zeit"]
+                if pd.isna(time_val):
+                    time_val = 0.0
+                else:
+                    time_val = float(time_val)
 
-                            # Überprüfe, ob das PSP-Element bereits im Ergebnis enthalten ist, andernfalls füge es hinzu
-                            if psp_element not in result[date]:
-                                result[date][psp_element] = {"__total__": 0.0}
+                comment = str(row["Kommentar"]) if not pd.isna(row["Kommentar"]) else ""
 
-                            # Überprüfe, ob der Kunde bereits im Ergebnis enthalten ist, andernfalls füge ihn hinzu
-                            if customer not in result[date][psp_element]:
-                                result[date][psp_element][customer] = {"__total__": 0.0, "__comment__": ""}
+                if date_val not in result:
+                    result[date_val] = {}
 
-                            # Addiere die Zeit zum Gesamtzeit des Kunden für das PSP-Element an diesem Tag
-                            result[date][psp_element][customer]["__total__"] += time
-                            result[date][psp_element]["__total__"] += time
+                if psp_element not in result[date_val]:
+                    result[date_val][psp_element] = {"__total__": 0.0}
 
-                            # Füge den Kommentar zum Ergebnis hinzu
-                            result[date][psp_element][customer]["__comment__"] = comment
+                if customer not in result[date_val][psp_element]:
+                    result[date_val][psp_element][customer] = {"__total__": 0.0, "__comment__": ""}
 
-                # Wenn der Code bis hierhin erfolgreich ausgeführt wird, wurde das richtige Trennzeichen gefunden
-                print(f"Erfolgreiches Lesen der CSV-Datei mit Trennzeichen: {delimiter}")
-                return result
+                result[date_val][psp_element][customer]["__total__"] += time_val
+                result[date_val][psp_element]["__total__"] += time_val
+                result[date_val][psp_element][customer]["__comment__"] = comment
 
-            except csv.Error:
-                # Wenn ein Fehler beim Lesen der CSV-Datei auftritt, probiere das nächste Trennzeichen
-                continue
-        
-        # Wenn kein gültiges Trennzeichen gefunden wurde, gib eine Fehlermeldung aus
-        print("Fehler: Kein gültiges Trennzeichen gefunden.")
-        return None
+            return result
 
-    def display_results(self, log_data):
+        except Exception as e:
+            print(f"Fehler beim Analysieren der Log-Datei: {e}")
+            return None
+
+    def display_results(self, log_data: dict):
+        """
+        Zeigt die Ergebnisse in einem neuen Toplevel-Fenster an (Treeview).
+        """
         def jump_to_date():
             selected_date = date_combobox.get()
             if selected_date in log_data:
                 for child in tree.get_children():
                     values = tree.item(child)['values']
                     if values[0] == selected_date:
-                        index = tree.get_children().index(child) + 1
-                        tree.see(tree.get_children()[index])
+                        # item ID
+                        tree.see(child)
+                        tree.selection_set(child)
                         break
 
-        window = tk.Tk()
+        # Toplevel statt Tk, damit die Hauptanwendung nicht blockiert wird
+        # und kein zweiter Mainloop gestartet wird (was zu Fehlern führen kann).
+        window = tk.Toplevel()
         window.title("Log-Auswertung")
 
         frame = tk.Frame(window)
@@ -130,13 +140,15 @@ class Auswertung:
         tree.tag_configure("date", font=("Arial", 10, "bold"))
 
         tree.pack(fill="both", expand=True)
+        
+        # Initialen Sprung ausführen (optional)
         jump_to_date()
-        window.mainloop()
+        
+        # window.mainloop() entfernen, da wir uns im Loop der Hauptanwendung befinden
 
     def run_analysis(self):
         log_data = self.analyze_log_file()
         if log_data:
             self.display_results(log_data)
 
-auswertung = Auswertung('log.csv')
 
