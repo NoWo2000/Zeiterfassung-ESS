@@ -48,15 +48,27 @@ class GuiNice:
                 with ui.card().classes('w-full max-w-md p-3 gap-2 no-shadow border-[1px]'):
                     # Date Input
                     with ui.row().classes('w-full items-center gap-2'):
-                         self.date_input = ui.input('Datum').props('dense placeholder="dd.mm.yyyy"').classes('flex-grow')
+                         self.date_input = ui.input('Datum (Optional)').props('dense placeholder="Leer für heute"').classes('flex-grow')
                          with self.date_input.add_slot('append'):
                             ui.icon('event').classes('cursor-pointer').on('click', lambda: date_dialog.open())
                             with ui.dialog() as date_dialog, ui.card():
-                                ui.date().on('change', lambda e: (self.date_input.set_value(pd.to_datetime(e.value).strftime("%d.%m.%Y")), date_dialog.close()))
+                                def on_date_change(e):
+                                    try:
+                                        # NiceGUI Date picker returns YYYY-MM-DD string value
+                                        date_str = e.value
+                                        if date_str:
+                                            # Format to German standard dd.mm.yyyy
+                                            formatted_date = pd.to_datetime(date_str).strftime("%d.%m.%Y")
+                                            self.date_input.value = formatted_date
+                                            date_dialog.close()
+                                    except Exception as ex:
+                                        ui.notify(f"Fehler beim Datum: {ex}", type='negative')
+                                    
+                                ui.date().on('change', on_date_change)
 
                     # PSP Input
                     self.psp_input = ui.select(
-                        options=self.config.get_combobox_value("psp"), 
+                        options=self._get_psp_options(), 
                         label='PSP', 
                         with_input=True
                     ).props('dense options-dense').classes('w-full')
@@ -76,12 +88,16 @@ class GuiNice:
                     ).props('dense options-dense').classes('w-full')
 
                     # Comment Input
-                    self.comment_input = ui.select(
-                        options=self.config.get_combobox_value("comments"),
+                    # Using datalist for true free-text experience with suggestions
+                    comment_options = self.config.get_combobox_value("comments")
+                    self.comment_datalist = ui.element('datalist').props('id=comment_suggestions')
+                    with self.comment_datalist:
+                        for opt in comment_options:
+                            ui.element('option').props(f'value="{opt}"')
+                    
+                    self.comment_input = ui.input(
                         label='Kommentar',
-                        with_input=True,
-                        new_value_mode='add-unique'
-                    ).props('dense options-dense').classes('w-full')
+                    ).props('dense list=comment_suggestions').classes('w-full')
                     
                     # Save Button
                     ui.button('Speichern', on_click=self.save_entry).props('dense').classes('w-full bg-primary')
@@ -112,7 +128,7 @@ class GuiNice:
             with ui.tab_panel(self.tab_settings).classes('w-full p-2 gap-2'):
                 ui.label('Konfiguration verwalten').classes('text-lg font-bold mb-2')
                 
-                self.render_settings_list("PSP-Elemente", "psp", "Neues PSP-Element")
+                self.render_settings_list("PSP-Elemente", "psp", "Neues PSP-Element", with_description=True)
                 self.render_settings_list("Kunden", "customer", "Neuer Kunde")
                 self.render_settings_list("Kommentare (Vorlagen)", "comments", "Neuer Kommentar")
 
@@ -197,7 +213,7 @@ class GuiNice:
             with self.analysis_container:
                 ui.label(f'Fehler bei der Auswertung: {e}').classes('text-red-500')
 
-    def render_settings_list(self, title, section, placeholder):
+    def render_settings_list(self, title, section, placeholder, with_description=False):
         with ui.card().classes('w-full p-3 mb-2 border-[1px] no-shadow'):
             ui.label(title).classes('font-bold text-primary')
             
@@ -206,53 +222,90 @@ class GuiNice:
             
             def refresh_items():
                 item_container.clear()
-                items = self.config.get_combobox_value(section)
+                if with_description:
+                    # Get items as (key, value)
+                    items = self.config.get_items(section)
+                else:
+                    # Get just keys
+                    items = self.config.get_combobox_value(section)
+                
                 if not items:
                     with item_container:
                         ui.label('Keine Einträge').classes('text-gray-400 italic text-sm')
+                        
                 for item in items:
+                    key = item[0] if with_description else item
+                    val = item[1] if with_description and item[1] else None
+                    
+                    display_text = f"{key} ({val})" if val else key
+
                     with item_container:
                         # Chip with delete functionality
                         with ui.element('div').classes('bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1 text-sm flex items-center gap-2 border border-gray-300 dark:border-gray-600'):
-                            ui.label(item)
-                            ui.icon('close').classes('cursor-pointer text-gray-500 hover:text-red-500 text-xs').on('click', lambda _, i=item: remove_item(i))
+                            ui.label(display_text)
+                            ui.icon('close').classes('cursor-pointer text-gray-500 hover:text-red-500 text-xs').on('click', lambda _, i=key: remove_item(i))
 
-            def remove_item(item):
-                self.config.remove_item(section, item)
-                refresh_items()
+            def remove_item(item_key):
+                self.config.remove_item(section, item_key)
+                ui.notify(f'"{item_key}" entfernt.', type='info')
                 self.update_booking_options()
-                ui.notify(f'"{item}" entfernt.', type='info')
+                refresh_items()
 
             def add_item():
-                val = input_field.value.strip()
-                if val:
-                    self.config.add_item(section, val)
+                key_val = input_field.value.strip()
+                desc_val = desc_input.value.strip() if with_description and desc_input else None
+                
+                if key_val:
+                    self.config.add_item(section, key_val, desc_val)
                     input_field.value = ""
+                    if desc_input: desc_input.value = ""
                     refresh_items()
                     self.update_booking_options()
-                    ui.notify(f'"{val}" hinzugefügt.', type='positive')
+                    ui.notify(f'"{key_val}" hinzugefügt.', type='positive')
 
             # Input row
             with ui.row().classes('w-full items-center gap-2 mt-2'):
                 input_field = ui.input(placeholder=placeholder).props('dense').classes('flex-grow')
+                desc_input = None
+                if with_description:
+                    desc_input = ui.input(placeholder="Beschreibung (optional)").props('dense').classes('flex-grow')
+                
                 ui.button(icon='add', on_click=add_item).props('dense flat round color=primary')
 
             # Initial population
             refresh_items()
 
+    def _get_psp_options(self):
+        """Helper to build PSP options dict with descriptions."""
+        items = self.config.get_items("psp")
+        options = {}
+        for key, val in items:
+            label = f"{key} ({val})" if val else key
+            options[key] = label
+        return options
+
     def update_booking_options(self):
         """Refreshes the dropdown options in the booking tab."""
         if self.psp_input:
-            self.psp_input.options = self.config.get_combobox_value("psp")
+            self.psp_input.options = self._get_psp_options()
             self.psp_input.update()
         
         if self.customer_input:
             self.customer_input.options = self.config.get_combobox_value("customer")
             self.customer_input.update()
             
-        if self.comment_input:
-            self.comment_input.options = self.config.get_combobox_value("comments")
-            self.comment_input.update()
+        # For comment input using datalist, we need to rebuild the datalist
+        # This is strictly not easily updatable without rebuilding the datalist element or clearing it
+        # Since datalist is static in DOM, we might need a reference or just reload. 
+        # For now, simplistic approach: notify user or just reload app? 
+        # Actually, let's try to clear and re-add if we can find it.
+        # But for 'ui.element("datalist")', we didn't save a ref. 
+        # Let's save a ref to comment_datalist in setup_ui first.
+        if hasattr(self, 'comment_datalist') and self.comment_datalist:
+            self.comment_datalist.clear()
+            with self.comment_datalist:
+                 for opt in self.config.get_combobox_value("comments"):
+                            ui.element('option').props(f'value="{opt}"')
 
     def save_entry(self):
         # Validation
@@ -343,7 +396,7 @@ def run_app():
     GuiNice(config)
     # Native mode for desktop-like experience
     # Native mode for desktop-like experience
-    ui.run(native=True, window_size=(500, 600), title="Smart ESS", reload=False)
+    ui.run(native=True, window_size=(500, 600), title="Smart ESS - Noah Wollenhaupt", reload=False)
 
 if __name__ == "__main__":
     run_app()

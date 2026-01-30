@@ -33,17 +33,24 @@ class Configuration:
         self.delete_all()
         self.config.read("config.ini", encoding="utf-8")
 
-    def add_item(self, section: str, item: str):
+    def get_items(self, section: str) -> List[tuple]:
         """
-        Fügt ein Item zu einer Sektion hinzu und speichert die Konfiguration.
+        Gibt die Items einer Sektion als Liste von (Key, Value) Tupeln zurück.
+        """
+        if self.config.has_section(section):
+            return self.config.items(section)
+        return []
+
+    def add_item(self, section: str, item: str, value: str = None):
+        """
+        Fügt ein Item zu einer Sektion hinzu (optional mit Wert) und speichert die Konfiguration.
         """
         if not self.config.has_section(section):
             self.config.add_section(section)
         
-        # In ConfigParser with allow_no_value=True, keys are added with None value
-        if item not in self.config.options(section):
-            self.config.set(section, item, None)
-            self.save()
+        # Always set, updating if exists or creating if not
+        self.config.set(section, item, value)
+        self.save()
 
     def remove_item(self, section: str, item: str):
         """

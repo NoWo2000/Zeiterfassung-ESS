@@ -1,85 +1,22 @@
 Datum;Kalenderwoche;PSP;Kunde;Zeit;Kommentar
 
-02.10.2023;40;PSP-1;Cust-A;2,0;Initial analysis
-02.10.2023;40;PSP-1;Cust-A;1,5;Refinement
-02.10.2023;40;PSP-2;Cust-B;3,25;Frontend dev
-02.10.2023;40;PSP-2;Cust-B;1,25;Review
-02.10.2023;40;PSP-3;Cust-C;0,75;Sync meeting
-03.10.2023;40;PSP-1;Cust-A;4,0;Feature implementation
-03.10.2023;40;PSP-1;Cust-A;0,5;Testing
-03.10.2023;40;PSP-2;Cust-B;2,5;Bug fixing
-03.10.2023;40;PSP-2;Cust-B;1,0;Client call
-03.10.2023;40;PSP-3;Cust-C;1,5;Documentation
-04.10.2023;40;PSP-1;Cust-A;3,0;Database migration
-04.10.2023;40;PSP-1;Cust-A;1,0;Code review
-04.10.2023;40;PSP-2;Cust-B;2,75;UI adjustments
-04.10.2023;40;PSP-2;Cust-B;1,25;Unit tests
-04.10.2023;40;PSP-3;Cust-C;0,5;Status update
-05.10.2023;40;PSP-1;Cust-A;2,25;Security audit
-05.10.2023;40;PSP-1;Cust-A;1,75;Patching
-05.10.2023;40;PSP-2;Cust-B;3,5;API integration
-05.10.2023;40;PSP-2;Cust-B;0,5;Deployment
-05.10.2023;40;PSP-3;Cust-C;1,0;Internal training
-06.10.2023;40;PSP-1;Cust-A;2,0;Weekly summary
-06.10.2023;40;PSP-1;Cust-A;1,5;Planning next sprint
-06.10.2023;40;PSP-2;Cust-B;3,0;Performance tuning
-06.10.2023;40;PSP-2;Cust-B;1,0;Final checks
-06.10.2023;40;PSP-3;Cust-C;0,5;Admin
-09.10.2023;41;PSP-1;Cust-A;2,5;New requirements
-09.10.2023;41;PSP-1;Cust-A;1,5;Architecture design
-09.10.2023;41;PSP-2;Cust-B;3,0;Backend logic
-09.10.2023;41;PSP-2;Cust-B;1,5;Integration tests
-09.10.2023;41;PSP-3;Cust-C;0,5;Daily standup
-10.10.2023;41;PSP-1;Cust-A;4,5;Coding session
-10.10.2023;41;PSP-1;Cust-A;0,5;Peer review
-10.10.2023;41;PSP-2;Cust-B;2,0;CSS styling
-10.10.2023;41;PSP-2;Cust-B;1,0;Asset optimization
-10.10.2023;41;PSP-3;Cust-C;1,0;Project mgmt
-11.10.2023;41;PSP-1;Cust-A;3,25;Docker setup
-11.10.2023;41;PSP-1;Cust-A;1,25;CI/CD config
-11.10.2023;41;PSP-2;Cust-B;2,5;Login flow
-11.10.2023;41;PSP-2;Cust-B;1,5;Auth testing
-11.10.2023;41;PSP-3;Cust-C;0,5;Feedback loop
-12.10.2023;41;PSP-1;Cust-A;2,0;Refactoring
-12.10.2023;41;PSP-1;Cust-A;2,0;Legacy code cleanup
-12.10.2023;41;PSP-2;Cust-B;3,0;Search engine
-12.10.2023;41;PSP-2;Cust-B;1,0;Indexing
-12.10.2023;41;PSP-3;Cust-C;1,0;Stakeholder demo
-13.10.2023;41;PSP-1;Cust-A;2,5;Hotfix
-13.10.2023;41;PSP-1;Cust-A;1,0;Validation
-13.10.2023;41;PSP-2;Cust-B;3,5;Mobile responsive
-13.10.2023;41;PSP-2;Cust-B;0,5;Browser testing
-13.10.2023;41;PSP-3;Cust-C;0,5;Weekly review
-16.10.2023;42;PSP-1;Cust-A;2,0;Sprint start
-16.10.2023;42;PSP-1;Cust-A;1,5;Task breakdown
-16.10.2023;42;PSP-2;Cust-B;3,25;Data modeling
-16.10.2023;42;PSP-2;Cust-B;1,25;Schema update
-16.10.2023;42;PSP-3;Cust-C;0,75;Resource planning
-17.10.2023;42;PSP-1;Cust-A;4,0;Core logic
-17.10.2023;42;PSP-1;Cust-A;0,5;Error handling
-17.10.2023;42;PSP-2;Cust-B;2,5;API endpoints
-17.10.2023;42;PSP-2;Cust-B;1,0;Swagger docs
-17.10.2023;42;PSP-3;Cust-C;1,5;Client workshop
-18.10.2023;42;PSP-1;Cust-A;3,0;Module integration
-18.10.2023;42;PSP-1;Cust-A;1,0;Troubleshooting
-18.10.2023;42;PSP-2;Cust-B;2,75;Dashboard UI
-18.10.2023;42;PSP-2;Cust-B;1,25;Chart rendering
-18.10.2023;42;PSP-3;Cust-C;0,5;Internal sync
-19.10.2023;42;PSP-1;Cust-A;2,25;Encryption
-19.10.2023;42;PSP-1;Cust-A;1,75;Key management
-19.10.2023;42;PSP-2;Cust-B;3,5;Export feature
-19.10.2023;42;PSP-2;Cust-B;0,5;CSV generation
-19.10.2023;42;PSP-3;Cust-C;1,0;User training
-20.10.2023;42;PSP-1;Cust-A;2,0;QA pass
-20.10.2023;42;PSP-1;Cust-A;1,5;Log analysis
-20.10.2023;42;PSP-2;Cust-B;3,0;Server migration
-20.10.2023;42;PSP-2;Cust-B;1,0;DNS config
-20.10.2023;42;PSP-3;Cust-C;0,5;Admin
-23.10.2023;43;PSP-1;Cust-A;2,5;Requirement gathering
-23.10.2023;43;PSP-1;Cust-A;1,5;Feasibility study
-23.10.2023;43;PSP-2;Cust-B;3,0;Payment gateway
-23.10.2023;43;PSP-2;Cust-B;1,5;Stripe integration
-23.10.2023;43;PSP-3;Cust-C;0,5;Daily standup
-24.10.2023;43;PSP-1;Cust-A;4,5;Workflow engine
-24.10.2023;43;PSP-1;Cust-A;0,5;State machine
-24.10.2023;43;PSP-2;Cust-B;2,0;Email templates
+01.12.2025;49;PSP-1;Cust-A;4,0;Feature implementation
+01.12.2025;49;PSP-2;Cust-B;2,0;Code review
+02.12.2025;49;PSP-1;Cust-A;3,5;Debugging
+02.12.2025;49;PSP-3;Cust-C;1,0;Status sync
+03.12.2025;49;PSP-2;Cust-B;5,0;UI design
+03.12.2025;49;PSP-1;Cust-A;2,5;Documentation
+04.12.2025;49;PSP-4;Cust-D;6,0;Backend setup
+04.12.2025;49;PSP-2;Cust-B;1,5;Refactoring
+05.12.2025;49;PSP-3;Cust-C;4,0;Workshop
+05.12.2025;49;PSP-1;Cust-A;2,0;Deployment
+08.12.2025;50;PSP-1;Cust-A;3,0;Research
+08.12.2025;50;PSP-2;Cust-B;4,0;Integration tests
+09.12.2025;50;PSP-3;Cust-C;2,5;Client call
+09.12.2025;50;PSP-1;Cust-A;5,0;Hotfix
+10.12.2025;50;PSP-4;Cust-D;3,5;Database migration
+10.12.2025;50;PSP-2;Cust-B;2,0;Mentoring
+11.12.2025;50;PSP-1;Cust-A;4,5;Performance tuning
+11.12.2025;50;PSP-3;Cust-C;1,5;Planning
+12.12.2025;50;PSP-2;Cust-B;6,0;Security audit
+
