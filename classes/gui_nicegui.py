@@ -4,6 +4,7 @@ from classes.configuration import Configuration
 import pandas as pd
 import os
 import time
+import platform
 from classes.auswertung import Auswertung # Import logic if needed, but we will reimplement viewing in NiceGUI
 from classes.configuration import Configuration
 import pandas as pd
@@ -76,21 +77,19 @@ class GuiNice:
                         options=self._get_psp_options(), 
                         label='PSP', 
                         with_input=True
-                    ).props('dense options-dense').classes('w-full')
+                    ).props('dense options-dense new-value-mode="add-unique"').classes('w-full')
                     
                     # Customer Input
                     self.customer_input = ui.select(
                         options=self.config.get_combobox_value("customer"), 
                         label='Kunde', 
                         with_input=True
-                    ).props('dense options-dense').classes('w-full')
+                    ).props('dense options-dense new-value-mode="add-unique"').classes('w-full')
                     
-                    # Duration Input
-                    self.duration_input = ui.select(
-                        options=self.config.get_combobox_value("times"), 
-                        label='Dauer (min)', 
-                        with_input=True
-                    ).props('dense options-dense').classes('w-full')
+                    # Duration Input with autocomplete
+                    duration_options = self.config.get_combobox_value("times")
+                    self.duration_input = ui.input(label='Dauer (min)').props('dense').classes('w-full')
+                    self.duration_input.set_autocomplete(duration_options)
 
                     # Comment Input
                     # Using datalist for true free-text experience with suggestions
@@ -109,13 +108,11 @@ class GuiNice:
 
                     ui.separator().classes('my-1')
 
-                    # Sleeptimer
+                    # Sleeptimer with autocomplete
                     with ui.row().classes('w-full gap-2 items-center'):
-                        self.sleeptimer_input = ui.select(
-                            options=self.config.get_combobox_value("times"), 
-                            label='Sleeptimer (min)', 
-                            with_input=True
-                        ).props('dense options-dense').classes('flex-grow')
+                        sleeptimer_options = self.config.get_combobox_value("times")
+                        self.sleeptimer_input = ui.input(label='Sleeptimer (min)').props('dense').classes('flex-grow')
+                        self.sleeptimer_input.set_autocomplete(sleeptimer_options)
                         ui.button('Start', on_click=self.start_sleeptimer).props('dense outline').classes('w-auto')
 
                 # Info Section (Fixed at bottom or just below)
@@ -353,17 +350,63 @@ class GuiNice:
         self.refresh_last_entry()
 
     def start_sleeptimer(self):
+        # Validate sleeptimer input
+        if not self.sleeptimer_input.value:
+            ui.notify('Bitte gib Minuten für den Sleeptimer ein!', type='negative')
+            return
+            
         try:
             minutes = int(self.sleeptimer_input.value)
-            self.save_entry()
-            ui.notify(f'Sleeptimer gestartet für {minutes} Minuten. Fenster wird minimiert (simuliert).', type='info')
-            
-            # NiceGUI runs in browser, so "hiding" window is tricky in native mode. 
-            # We can however use a timer to show a notification/dialog later.
-            ui.timer(minutes * 60, lambda: ui.notify('Sleeptimer abgelaufen! Zeit wieder an die Arbeit zu gehen.', close_button='OK', type='warning', timeout=None), once=True)
-            
+            if minutes <= 0:
+                ui.notify('Bitte gib eine positive Zahl ein!', type='negative')
+                return
         except (ValueError, TypeError):
             ui.notify('Bitte gültige Minuten für Sleeptimer eingeben', type='negative')
+            return
+        
+        # Optionally save entry if PSP and duration are filled
+        if self.psp_input.value and self.duration_input.value:
+            self.save_entry()
+            ui.notify(f'Eintrag gespeichert. Sleeptimer gestartet für {minutes} Minuten.', type='positive')
+        else:
+            ui.notify(f'Sleeptimer gestartet für {minutes} Minuten (ohne Eintrag).', type='info')
+        
+        # Minimize window (native mode only)
+        try:
+            app.native.main_window.minimize()
+        except:
+            pass  # If minimize not available, just continue
+        
+        # Set up timer to show notification and restore window
+        ui.timer(minutes * 60, lambda: self.sleeptimer_finished(), once=True)
+    
+    def sleeptimer_finished(self):
+        """Called when sleeptimer finishes - shows notification and restores window"""
+        # Show OS notification
+        self.show_notification('Zeiterfassung-ESS', 'Sleeptimer abgelaufen! Bitte Zeiten erfassen.')
+        
+        # Restore window (native mode only)
+        try:
+            app.native.main_window.restore()
+            app.native.main_window.show()
+        except:
+            pass
+        
+        # Also show in-app notification
+        ui.notify('Sleeptimer abgelaufen! Bitte Zeiten erfassen.', close_button='OK', type='warning', timeout=None)
+    
+    def show_notification(self, title, message):
+        """Shows OS-native notification"""
+        try:
+            from plyer import notification
+            notification.notify(
+                title=title,
+                message=message,
+                app_name='Zeiterfassung-ESS',
+                timeout=10
+            )
+        except Exception as e:
+            print(f"Notification failed: {e}")
 
     def clear_inputs(self):
         self.date_input.value = None

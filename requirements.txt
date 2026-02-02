@@ -4,3 +4,4 @@ sv-ttk
 tkcalendar
 pywebview
 matplotlib
+plyer
