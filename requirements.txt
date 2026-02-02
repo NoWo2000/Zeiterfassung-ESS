@@ -1,0 +1,6 @@
+nicegui
+pandas
+sv-ttk
+tkcalendar
+pywebview
+matplotlib

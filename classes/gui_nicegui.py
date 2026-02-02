@@ -49,22 +49,27 @@ class GuiNice:
                     # Date Input
                     with ui.row().classes('w-full items-center gap-2'):
                          self.date_input = ui.input('Datum (Optional)').props('dense placeholder="Leer für heute"').classes('flex-grow')
+                         
+                         # Date Dialog - define after input so self.date_input exists
+                         with ui.dialog() as date_dialog, ui.card():
+                            date_picker = ui.date()
+                            
+                            def on_date_change():
+                                try:
+                                    # NiceGUI Date picker returns YYYY-MM-DD string value
+                                    date_str = date_picker.value
+                                    if date_str:
+                                        # Format to German standard dd.mm.yyyy
+                                        formatted_date = pd.to_datetime(date_str).strftime("%d.%m.%Y")
+                                        self.date_input.value = formatted_date
+                                        date_dialog.close()
+                                except Exception as ex:
+                                    ui.notify(f"Fehler beim Datum: {ex}", type='negative')
+                            
+                            date_picker.on('update:model-value', on_date_change)
+                         
                          with self.date_input.add_slot('append'):
                             ui.icon('event').classes('cursor-pointer').on('click', lambda: date_dialog.open())
-                            with ui.dialog() as date_dialog, ui.card():
-                                def on_date_change(e):
-                                    try:
-                                        # NiceGUI Date picker returns YYYY-MM-DD string value
-                                        date_str = e.value
-                                        if date_str:
-                                            # Format to German standard dd.mm.yyyy
-                                            formatted_date = pd.to_datetime(date_str).strftime("%d.%m.%Y")
-                                            self.date_input.value = formatted_date
-                                            date_dialog.close()
-                                    except Exception as ex:
-                                        ui.notify(f"Fehler beim Datum: {ex}", type='negative')
-                                    
-                                ui.date().on('change', on_date_change)
 
                     # PSP Input
                     self.psp_input = ui.select(
