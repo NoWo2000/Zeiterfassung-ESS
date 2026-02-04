@@ -23,6 +23,11 @@ class GuiNice:
         self.duration_input = None
         self.comment_input = None
         self.sleeptimer_input = None
+        self.autoreminder_switch = None
+        self.sleeptimer_input = None
+        self.autoreminder_switch = None
+        self.active_timer = None
+        self.current_timer_minutes = 0
         
         # Labels for feedback
         self.last_entry_label = None
@@ -113,6 +118,7 @@ class GuiNice:
                         sleeptimer_options = self.config.get_combobox_value("times")
                         self.sleeptimer_input = ui.input(label='Sleeptimer (min)').props('dense').classes('flex-grow')
                         self.sleeptimer_input.set_autocomplete(sleeptimer_options)
+                        self.autoreminder_switch = ui.switch('Auto').props('dense uncheck-icon=close check-icon=check')
                         ui.button('Start', on_click=self.start_sleeptimer).props('dense outline').classes('w-auto')
 
                 # Info Section (Fixed at bottom or just below)
@@ -349,6 +355,34 @@ class GuiNice:
         self.clear_inputs()
         self.refresh_last_entry()
 
+        # Auto-Reminder Logic: consistency check and restart
+        if self.autoreminder_switch and self.autoreminder_switch.value:
+            # Update internal minutes from UI if possible (it wasn't cleared)
+            if self.sleeptimer_input and self.sleeptimer_input.value:
+                try:
+                    self.current_timer_minutes = int(self.sleeptimer_input.value)
+                except:
+                    pass
+            
+            # If we have a valid timer configuration, restart the cycle
+            if self.current_timer_minutes > 0:
+                try:
+                    app.native.main_window.minimize()
+                except:
+                    pass
+                self._schedule_next_timer()
+                # ui.notify(f'Timer neu gestartet ({self.current_timer_minutes} min)', type='info') # Optional feedback
+
+    def clear_inputs(self):
+        self.date_input.value = None
+        self.psp_input.value = None
+        self.customer_input.value = None
+        self.duration_input.value = None
+        self.comment_input.value = None
+        # Only clear sleeptimer if auto is NOT active
+        if not (self.autoreminder_switch and self.autoreminder_switch.value):
+            self.sleeptimer_input.value = None
+
     def start_sleeptimer(self):
         # Validate sleeptimer input
         if not self.sleeptimer_input.value:
@@ -360,25 +394,45 @@ class GuiNice:
             if minutes <= 0:
                 ui.notify('Bitte gib eine positive Zahl ein!', type='negative')
                 return
+            self.current_timer_minutes = minutes
         except (ValueError, TypeError):
             ui.notify('Bitte gültige Minuten für Sleeptimer eingeben', type='negative')
             return
         
-        # Optionally save entry if PSP and duration are filled
+        # Determine notification text
+        is_cyclic = self.autoreminder_switch.value if self.autoreminder_switch else False
+        mode_text = "Zyklisch -> Auto AN" if is_cyclic else "Einmalig -> Auto AUS"
+        
+        # Notify user and save if needed
         if self.psp_input.value and self.duration_input.value:
             self.save_entry()
-            ui.notify(f'Eintrag gespeichert. Sleeptimer gestartet für {minutes} Minuten.', type='positive')
+            ui.notify(f'Eintrag gespeichert. Sleeptimer gestartet ({mode_text}, {minutes} min).', type='positive')
         else:
-            ui.notify(f'Sleeptimer gestartet für {minutes} Minuten (ohne Eintrag).', type='info')
+            ui.notify(f'Sleeptimer gestartet ({mode_text}, {minutes} min).', type='info')
         
         # Minimize window (native mode only)
         try:
             app.native.main_window.minimize()
         except:
-            pass  # If minimize not available, just continue
+            pass
         
-        # Set up timer to show notification and restore window
-        ui.timer(minutes * 60, lambda: self.sleeptimer_finished(), once=True)
+        # Schedule the timer
+        self._schedule_next_timer()
+
+    def _schedule_next_timer(self):
+        """Cancels existing timer and schedules a new single-shot timer"""
+        if self.active_timer:
+            self.active_timer.active = False
+            try:
+                self.active_timer.delete()
+            except:
+                pass # safely ignore if already deleted
+            self.active_timer = None
+            
+        # Create new single-shot timer
+        # We use explicit float conversion for safety
+        interval_seconds = float(self.current_timer_minutes) * 60.0
+        self.active_timer = ui.timer(interval_seconds, self.sleeptimer_finished, once=True)
     
     def sleeptimer_finished(self):
         """Called when sleeptimer finishes - shows notification and restores window"""
@@ -393,7 +447,18 @@ class GuiNice:
             pass
         
         # Also show in-app notification
-        ui.notify('Sleeptimer abgelaufen! Bitte Zeiten erfassen.', close_button='OK', type='warning', timeout=None)
+        ui.notify('Sleeptimer abgelaufen! Bitte Zeiten erfassen.', close_button='OK', type='warning', timeout=0)
+        
+        # Check if we should repeat (Auto Switch ON)
+        is_cyclic = self.autoreminder_switch.value if self.autoreminder_switch else False
+        if is_cyclic:
+            # Reschedule
+            self._schedule_next_timer()
+        else:
+            # Cleanup
+            if self.active_timer:
+                self.active_timer.active = False
+                self.active_timer = None
     
     def show_notification(self, title, message):
         """Shows OS-native notification"""
